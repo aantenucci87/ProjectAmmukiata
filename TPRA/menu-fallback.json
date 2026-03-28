@@ -1,0 +1,27 @@
+{
+  "menu_esploso": [
+    {
+      "titolo": "Area Riservata",
+      "descrizione": "Accedi ai servizi TPRA",
+      "url": "/Auth/Login",
+      "sub": [
+        { "label": "Login", "route": "/Auth/Login" },
+        { "label": "Registrazione", "route": "/Auth/Registrazione" }
+      ]
+    },
+    {
+      "titolo": "Regolamenti",
+      "descrizione": "Documenti ufficiali e norme di gioco",
+      "url": "https://www.tpra.it/Home/Regolamenti"
+    },
+    {
+      "titolo": "Circuito TPRA",
+      "descrizione": "Calendario eventi e tornei",
+      "url": "/Circuito/Calendario",
+      "sub": [
+        { "label": "Calendario", "route": "/Circuito/Calendario" },
+        { "label": "Ranking", "route": "/Circuito/Ranking" }
+      ]
+    }
+  ]
+}

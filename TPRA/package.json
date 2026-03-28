@@ -1,0 +1,12 @@
+{
+  "name": "tpra-wrapper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TPRA wrapper con proxy locale per evitare errori CORS.",
+  "main": "main.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "electron": "electron ."
+  }
+}

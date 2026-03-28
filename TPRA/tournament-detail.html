@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dettaglio Torneo</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .detail-hero,
+      .detail-grid {
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(15, 26, 48, 0.94) 0%, rgba(12, 21, 39, 0.92) 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .detail-hero {
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .detail-eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .detail-title {
+        margin: 0;
+        font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+        line-height: 1.08;
+      }
+
+      .detail-subtitle {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      /* Permette al tabellone di uscire dal contenitore e di scrollare orizzontalmente */
+      #detail-board.detail-grid {
+        overflow: visible;
+      }
+
+      #detail-fighters.detail-grid,
+      #detail-board.detail-grid {
+        grid-template-columns: 1fr;
+      }
+
+      /* Sblocca overflow orizzontale nel main per non tagliare il tabellone */
+      .main-content,
+      .detail-main {
+        overflow: visible;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        overflow: visible;
+        background: transparent;
+      }
+
+      .detail-group {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: rgba(8, 14, 28, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+      }
+
+      .detail-group-title {
+        margin: 0;
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .detail-grid-inner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+
+      .detail-group-full .detail-grid-inner {
+        grid-template-columns: 1fr;
+      }
+
+      @media (min-width: 1200px) {
+        .detail-grid-inner {
+          grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+      }
+
+      .detail-cell {
+        padding: 16px 18px;
+        background: rgba(8, 14, 28, 0.88);
+        display: grid;
+        gap: 7px;
+      }
+
+      .detail-label {
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .detail-value {
+        color: var(--text);
+        font-size: 0.93rem;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      @media (max-width: 720px) {
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .detail-main {
+        display: grid;
+        gap: 16px;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      .fighters-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+      }
+
+      .fighter-master-card {
+        background: rgba(8, 14, 28, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        padding: 14px;
+        display: grid;
+        gap: 12px;
+        position: relative;
+      }
+
+      .fighter-seed-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(255, 193, 7, 0.24), rgba(255, 193, 7, 0.12));
+        border: 1px solid rgba(255, 193, 7, 0.55);
+        color: #ffd76a;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: none;
+      }
+
+      .seed-icon {
+        display: inline-block;
+        font-size: 0.88rem;
+        line-height: 1;
+      }
+
+      .fighter-card {
+        background: rgba(8, 14, 28, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 10px;
+        padding: 12px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        column-gap: 12px;
+        align-items: center;
+      }
+
+      .fighter-name {
+        margin: 0;
+        color: var(--text);
+        font-weight: 400;
+        font-size: 0.96rem;
+      }
+
+      .fighter-name-block {
+        display: grid;
+        gap: 4px;
+        align-content: center;
+      }
+
+      .fighter-surname-line {
+        margin: 0;
+        font-size: 0.98rem;
+      }
+
+      .fighter-given-line {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+        font-weight: 400;
+      }
+
+      .fighter-surname {
+        font-weight: 700;
+      }
+
+      .fighter-meta-line {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .fighter-metrics {
+        display: grid;
+        gap: 8px;
+        justify-items: start;
+      }
+
+      .fighter-metric {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 400;
+        letter-spacing: 0.01em;
+        text-transform: none;
+      }
+
+      .board-tabs {
+        display: inline-flex;
+        gap: 8px;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 6px;
+        border-radius: 10px;
+      }
+
+      .board-tab {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        padding: 8px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+
+      .board-tab.is-active {
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+      .board-panel {
+        min-height: 80px;
+      }
+
+      .board-panel-loading {
+        padding: 10px 0;
+        color: var(--muted);
+      }
+
+      .board-group {
+        margin-bottom: 14px;
+        padding: 12px;
+        background: rgba(8, 14, 28, 0.85);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 10px;
+      }
+
+      .board-group-title {
+        margin: 0 0 8px 0;
+        color: var(--text);
+        font-size: 0.95rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        text-align: center;
+      }
+
+      .board-subtitle {
+        margin: 8px 0 6px 0;
+        color: var(--muted);
+        font-size: 0.93rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .board-partite-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .board-toggle-inline {
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+        color: var(--text);
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+      }
+
+      .board-toggle-inline.is-active {
+        border-color: var(--accent);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+      }
+
+
+      .team-block {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0;
+      }
+
+      .team-line {
+        display: block;
+      }
+
+      .board-vs-col {
+        text-align: center;
+        color: var(--muted);
+        width: 48px;
+        white-space: nowrap;
+      }
+
+      .board-col-compact {
+        width: 1%;
+        white-space: nowrap;
+      }
+
+      .board-score-col {
+        text-align: right;
+      }
+
+      .tournaments-table thead th.board-score-col {
+        text-align: right;
+      }
+
+      .board-win-col {
+        width: 5%;
+        min-width: 38px;
+        text-align: center;
+        color: #6ad17f;
+        font-weight: 700;
+      }
+
+      .board-win-icon {
+        color: #24d665;
+        font-size: 1rem;
+        line-height: 1;
+        display: inline-block;
+      }
+
+      .board-col-id {
+        width: 6%;
+      }
+
+      .board-col-date {
+        width: 12%;
+      }
+
+      .board-team-col {
+        width: 26%;
+      }
+
+      .board-vs-col {
+        width: 4%;
+      }
+
+      .board-score-col {
+        width: 16%;
+      }
+
+      .board-team-left {
+        text-align: left;
+      }
+
+      .board-team-right {
+        text-align: right;
+      }
+
+      /* Classifiche */
+      .classifica-table-wrap {
+        margin-top: 10px;
+      }
+
+      .classifica-table thead th {
+        text-align: center;
+      }
+
+      .classifica-col-rank {
+        width: 10%;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .classifica-col-player {
+        text-align: left;
+      }
+
+      .classifica-col-center {
+        text-align: center;
+      }
+
+      .classifica-qualified {
+        background: rgba(36, 214, 101, 0.12);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigazione dettaglio">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">Dettaglio</p>
+            <h1>Torneo</h1>
+          </div>
+        </div>
+        <div class="sidebar-body">
+          <nav class="menu-list">
+            <a class="menu-item" href="#detail-info"><span class="menu-item-title">Scheda del torneo</span></a>
+            <a class="menu-item" href="#detail-fighters"><span class="menu-item-title">Fighters</span></a>
+            <a class="menu-item" href="#detail-board"><span class="menu-item-title">Tabellone e Ordine di Gioco</span></a>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div class="detail-main">
+          <section class="detail-hero" id="detail-info">
+            <span class="detail-eyebrow">Dettaglio Torneo</span>
+            <h1 class="detail-title" id="detail-title">Torneo</h1>
+            <p class="detail-subtitle" id="detail-subtitle">Scheda riepilogativa del torneo selezionato.</p>
+          </section>
+
+          <section class="detail-grid info-grid" id="detail-grid"></section>
+
+          <section class="detail-grid" id="detail-fighters"></section>
+
+          <section class="detail-grid" id="detail-board"></section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./tournament-detail.js"></script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TPRA Home</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside id="sidebar" class="sidebar is-locked" aria-label="Menu TPRA">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">Menu</p>
+            <h1>TPRA</h1>
+          </div>
+          <div class="sidebar-controls">
+            <button id="lock-sidebar" class="icon-button" type="button" aria-pressed="true" title="Blocca menu">
+              📌
+            </button>
+            <button id="toggle-sidebar" class="icon-button" type="button" aria-expanded="true" title="Minimizza menu">
+              ◀
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-body">
+          <nav id="menu-list" class="menu-list" aria-label="Risultati menu">
+            <p class="empty-state">Attendo i dati del menu...</p>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <section id="hero-section" class="hero-card">
+          <div class="logo-wrap">
+            <img
+              id="tpra-logo"
+              src="./images/TPRA-LOGO-NEG-rgb.svg"
+              alt="Logo TPRA"
+            />
+          </div>
+          <p class="hero-text">Home pulita con menu laterale alimentato dall'API TPRA.</p>
+        </section>
+        <section id="tabs-section" class="tabs-section" style="display: none;">
+          <h2 id="tabs-title" class="tabs-section-title"></h2>
+          <div class="tabs-container">
+            <div class="tabs-nav" id="tabs-nav"></div>
+            <div class="tabs-content" id="tabs-content"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
