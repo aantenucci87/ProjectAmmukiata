@@ -89,6 +89,23 @@
         background: rgba(255, 255, 255, 0.06);
       }
 
+      #player-history.history-cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        background: transparent;
+        padding: 0;
+        max-height: 70vh;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      .history-card {
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+
       .detail-group {
         display: grid;
         gap: 10px;
@@ -103,6 +120,14 @@
         color: var(--text);
         font-weight: 700;
         letter-spacing: 0.01em;
+      }
+
+      .history-card .detail-group-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
       }
 
       .detail-grid-inner {
@@ -140,6 +165,105 @@
       .detail-main {
         display: grid;
         gap: 16px;
+      }
+
+      .team-block {
+        display: grid;
+        gap: 2px;
+      }
+
+      .team-line {
+        display: block;
+      }
+
+      .board-win-icon {
+        color: #24d665;
+        font-weight: 700;
+        display: inline-block;
+        min-width: 18px;
+        text-align: center;
+      }
+
+      /* Match table alignment (mirrors torneo partite table) */
+      .board-col-compact {
+        width: 48px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .board-win-col {
+        width: 32px;
+        text-align: center;
+      }
+
+      .board-vs-col,
+      .board-col-compact.board-vs-col {
+        width: 40px;
+        text-align: center;
+      }
+
+      .board-team-col {
+        width: 1fr;
+      }
+
+      .board-team-left,
+      .board-team-right {
+        text-align: left;
+      }
+
+      .board-team-right {
+        text-align: right;
+      }
+
+      .board-score-col {
+        width: 110px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .tournaments-table {
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      .tournament-points {
+        margin-left: auto;
+        color: var(--accent);
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: right;
+        max-width: 55%;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      .history-actions {
+        display: flex;
+        justify-content: center;
+        padding: 4px 0 12px;
+      }
+
+      .load-more-btn {
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+        box-shadow: var(--shadow-light, 0 4px 10px rgba(0, 0, 0, 0.16));
+      }
+
+      .load-more-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow, 0 8px 18px rgba(0, 0, 0, 0.2));
+      }
+
+      .load-more-btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
       }
 
       @media (max-width: 720px) {
@@ -184,6 +308,10 @@
           <section class="detail-grid" id="player-stats"></section>
 
           <section class="detail-grid" id="player-history"></section>
+
+          <div class="history-actions is-hidden" id="history-actions">
+            <button type="button" class="load-more-btn" id="load-more-history">Carica altro</button>
+          </div>
 
           <section class="detail-grid" id="player-palmares"></section>
         </div>

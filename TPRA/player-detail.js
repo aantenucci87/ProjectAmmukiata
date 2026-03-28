@@ -1,4 +1,13 @@
 const PLAYER_DETAIL_CACHE_KEY = "tpra:playerDetail";
+const HISTORY_PAGE_SIZE = 12;
+const historyState = {
+  items: [],
+  rowSkip: 0,
+  fetchRows: HISTORY_PAGE_SIZE,
+  loading: false,
+  loaded: false,
+  hasMore: true,
+};
 
 function getParam(name, fallback = "") {
   const value = new URLSearchParams(window.location.search).get(name);
@@ -136,6 +145,42 @@ async function fetchPlayerDetail(idPersona) {
   return response.json();
 }
 
+async function fetchPlayerPalmares(idGiocatore) {
+  const response = await fetch("/api/giocatore-palmares", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ id_giocatore: idGiocatore, id_settore: 2 }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Impossibile recuperare il palmares (HTTP ${response.status})`);
+  }
+
+  return response.json();
+}
+
+async function fetchPlayerHistoryApi(idPersona, rowSkip = 0, fetchRows = HISTORY_PAGE_SIZE) {
+  const payload = {
+    id_persona: idPersona || "199522",
+    id_settore: 2,
+    tipo: null,
+    rowstoskip: rowSkip,
+    fetchrows: fetchRows,
+  };
+
+  const response = await fetch("/api/giocatore-ultimi-risultati", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Impossibile recuperare gli ultimi risultati (HTTP ${response.status})`);
+  }
+
+  return response.json();
+}
+
 function buildDetailCell(label, value) {
   if (value === undefined || value === null || String(value).trim() === "") return "";
   return `
@@ -193,42 +238,258 @@ function renderStatsSection(data) {
   target.innerHTML = '<div class="detail-cell"><div class="detail-value">Statistiche in arrivo.</div></div>';
 }
 
-function renderHistorySection(history) {
+function setHistoryLoadMoreLoading(isLoading) {
+  const btn = document.getElementById("load-more-history");
+  if (!btn) return;
+  btn.disabled = isLoading;
+  btn.textContent = isLoading ? "Caricamento..." : "Carica altro";
+}
+
+function updateHistoryActionsVisibility(hasResults = historyState.items.length > 0) {
+  const actions = document.getElementById("history-actions");
+  const historySection = document.getElementById("player-history");
+  if (!actions || !historySection) return;
+  const historyVisible = !historySection.classList.contains("is-hidden");
+  const shouldShow = historyVisible && hasResults && historyState.hasMore;
+  actions.classList.toggle("is-hidden", !shouldShow);
+}
+
+function renderHistorySection(historyData) {
   const target = document.getElementById("player-history");
   if (!target) return;
 
-  if (!Array.isArray(history) || history.length === 0) {
+  target.classList.add("history-cards");
+
+  const asTournaments = Array.isArray(historyData) && historyData.length && historyData[0]?.matches
+    ? historyData
+    : Array.isArray(historyData) && historyData.length
+    ? [
+        {
+          torneo: "Ultimi risultati",
+          circuito: "",
+          data: "",
+          matches: historyData,
+        },
+      ]
+    : [];
+
+  if (!asTournaments.length) {
     target.innerHTML = '<div class="detail-cell"><div class="detail-value">Storico tornei non disponibile.</div></div>';
     return;
   }
 
-  const header = ["Torneo", "Circuito", "Data", "Esito", "Punti"];
-  const rows = history
-    .map((item) => {
-      const cells = [
-        escapeHtml(item.torneo || "-"),
-        escapeHtml(item.circuito || "-"),
-        escapeHtml(item.data || "-"),
-        escapeHtml(item.esito || "-"),
-        escapeHtml(item.punti || "-"),
-      ]
-        .map((value) => `<td>${value}</td>`)
-        .join("");
-      return `<tr>${cells}</tr>`;
-    })
-    .join("");
+  const renderMatchesTable = (matches) => {
+    if (!Array.isArray(matches) || matches.length === 0) {
+      return '<div class="detail-value">Nessuna partita disponibile.</div>';
+    }
 
-  target.innerHTML = `
-    <div class="detail-cell">
-      <h3 class="detail-group-title">Ultimi Risultati</h3>
+    const buildTeamBlock = (value) => {
+      if (Array.isArray(value)) {
+        const lines = value
+          .map((entry) => {
+            const persona = entry?.persona || entry;
+            if (typeof persona === "string") {
+              const raw = persona.trim();
+              if (raw) return raw;
+            }
+
+            const full = persona?.nome_completo || persona?.nomeCompleto || "";
+            const cognome = persona?.cognome || persona?.last_name || "";
+            const nome = persona?.nome || persona?.first_name || "";
+            const name = [cognome, nome].filter(Boolean).join(" ") || full;
+            return name && String(name).trim() !== "" ? name : "";
+          })
+          .filter(Boolean);
+        if (!lines.length) return "";
+        return `<div class="team-block">${lines.map((line) => `<span class="team-line">${escapeHtml(line)}</span>`).join("")}</div>`;
+      }
+
+      if (!value || String(value).trim() === "") return "";
+      const parts = String(value).split("/").map((p) => p.trim()).filter(Boolean);
+      const lines = parts.length ? parts : [value];
+      return `<div class="team-block">${lines.map((line) => `<span class="team-line">${escapeHtml(line)}</span>`).join("")}</div>`;
+    };
+
+    const colGroup = `
+      <col class="board-win-col">
+      <col class="board-team-col board-team-col-left">
+      <col class="board-col-compact board-vs-col">
+      <col class="board-team-col board-team-col-right">
+      <col class="board-win-col">
+      <col class="board-score-col">
+    `;
+
+    const rows = matches
+      .map((match, idx) => {
+        const team1 = buildTeamBlock(match.giocatori1 || match.giocatore1);
+        const team2 = buildTeamBlock(match.giocatori2 || match.giocatore2);
+        const win1 = match.win1 ? '<span class="board-win-icon">&#10003;</span>' : "";
+        const win2 = match.win2 ? '<span class="board-win-icon">&#10003;</span>' : "";
+        const score = escapeHtml(match.punteggio || "");
+        const esito = escapeHtml(match.esito || "");
+        return `<tr>
+          <td class="board-col-compact board-win-col">${win1}</td>
+          <td class="board-team-left">${team1 || "-"}</td>
+          <td class="board-col-compact board-vs-col">vs.</td>
+          <td class="board-team-right">${team2 || "-"}</td>
+          <td class="board-col-compact board-win-col">${win2}</td>
+          <td class="board-score-col">${score || esito || ""}</td>
+        </tr>`;
+      })
+      .join("");
+
+    return `
       <div class="tournaments-table-wrap">
         <table class="tournaments-table">
-          <thead><tr>${header.map((h) => `<th>${escapeHtml(h)}</th>`).join("")}</tr></thead>
+          <colgroup>${colGroup}</colgroup>
           <tbody>${rows}</tbody>
         </table>
       </div>
-    </div>
-  `;
+    `;
+  };
+
+  const sections = asTournaments
+    .map((tournament) => {
+      const subtitleParts = [tournament.circuito].filter(Boolean).join(" · ");
+      const showPoints = tournament?.squadre === 0 && tournament?.punti !== undefined && tournament?.punti !== null;
+      const pointsTag = showPoints ? `<span class="tournament-points">Punti: ${escapeHtml(tournament.punti)}</span>` : "";
+      return `
+        <article class="detail-cell history-card">
+          <h3 class="detail-group-title">${escapeHtml(tournament.torneo || "Torneo")}${pointsTag ? ` ${pointsTag}` : ""}</h3>
+          ${subtitleParts ? `<div class="detail-subtitle">${escapeHtml(subtitleParts)}</div>` : ""}
+          ${renderMatchesTable(tournament.matches)}
+        </article>
+      `;
+    })
+    .join("");
+
+  target.innerHTML = sections;
+}
+
+async function loadHistorySection(idPersona, { append = false } = {}) {
+  const target = document.getElementById("player-history");
+  if (!target) return;
+
+  const playerId = idPersona || getParam("id", "199522") || "199522";
+  if (!playerId) {
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">ID giocatore mancante.</div></div>';
+    updateHistoryActionsVisibility(false);
+    return;
+  }
+
+  if (historyState.loading) return;
+
+  if (!append) {
+    historyState.items = [];
+    historyState.rowSkip = 0;
+    historyState.hasMore = true;
+  }
+
+  historyState.loading = true;
+  setHistoryLoadMoreLoading(true);
+
+  if (!append) {
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">Caricamento ultimi risultati...</div></div>';
+  }
+
+  try {
+    const data = await fetchPlayerHistoryApi(playerId, historyState.rowSkip, historyState.fetchRows);
+    const list = Array.isArray(data?.results) ? data.results : data?.result || data?.data || data;
+    const pick = (obj, keys, fallback = "") => {
+      for (const key of keys) {
+        const value = obj?.[key];
+        if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+      }
+      return fallback;
+    };
+
+    const tournaments = Array.isArray(list)
+      ? list.map((item, idx) => {
+          const matchesRaw = item?.partite || item?.matches || item?.incontri || item?.lista_partite || [];
+
+          const pickPlayersArray = (obj, keys) => {
+            for (const key of keys) {
+              const value = obj?.[key];
+              if (Array.isArray(value)) return value;
+            }
+            return [];
+          };
+
+          const matches = Array.isArray(matchesRaw)
+            ? matchesRaw.map((match) => ({
+                win1: pick(match, ["ft_win", "vittoria_team1", "win1", "winner_team1"], false) === true,
+                win2: pick(match, ["st_win", "vittoria_team2", "win2", "winner_team2"], false) === true,
+                giocatori1: (() => {
+                  const arr =
+                    pickPlayersArray(match, ["giocatori1", "giocatori_1", "players1", "team1", "squadra1", "partecipanti1"]) ||
+                    pickPlayersArray(match, ["giocatori", "team"]);
+                  if (Array.isArray(arr) && arr.length) return arr;
+                  return pick(
+                    match,
+                    [
+                      "giocatore1",
+                      "giocatori1",
+                      "player1",
+                      "team1",
+                      "tesserato1",
+                      "nome_giocatore1",
+                      "nome_team1",
+                    ],
+                    ""
+                  );
+                })(),
+                giocatori2: (() => {
+                  const arr =
+                    pickPlayersArray(match, ["giocatori2", "giocatori_2", "players2", "team2", "squadra2", "partecipanti2"]) ||
+                    pickPlayersArray(match, ["avversari", "opponenti"]);
+                  if (Array.isArray(arr) && arr.length) return arr;
+                  return pick(
+                    match,
+                    [
+                      "giocatore2",
+                      "giocatori2",
+                      "player2",
+                      "team2",
+                      "tesserato2",
+                      "nome_giocatore2",
+                      "nome_team2",
+                    ],
+                    ""
+                  );
+                })(),
+                esito: pick(match, ["esito", "risultato", "outcome", "fase"], ""),
+                punteggio: pick(match, ["punteggio", "score", "risultato_partita", "punteggio_match", "punteggio_partita"], ""),
+                punti: pick(match, ["punti", "tpra_points", "score_totale", "score"], ""),
+              }))
+            : [];
+
+          return {
+            torneo: pick(item, ["denominazione", "torneo", "nome", "nome_torneo", "titolo"], `Torneo ${idx + 1}`),
+            circuito: pick(item, ["circuito", "nome_circuito", "circuit"], ""),
+            squadre: pick(item, ["squadre", "num_squadre", "numero_squadre"], null),
+            punti: pick(item, ["punti", "punteggio", "points"], null),
+            matches,
+          };
+        })
+      : [];
+
+    const batchLength = Array.isArray(tournaments) ? tournaments.length : 0;
+    historyState.items = append ? historyState.items.concat(tournaments) : tournaments;
+    historyState.rowSkip += historyState.fetchRows;
+    historyState.loaded = true;
+    historyState.hasMore = batchLength > 0;
+
+    renderHistorySection(historyState.items);
+    updateHistoryActionsVisibility(historyState.items.length > 0);
+  } catch (error) {
+    console.error(error);
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">Errore nel caricamento degli ultimi risultati.</div></div>';
+    historyState.hasMore = false;
+    updateHistoryActionsVisibility(false);
+  } finally {
+    historyState.loading = false;
+    setHistoryLoadMoreLoading(false);
+  }
 }
 
 function renderPalmaresSection(items) {
@@ -240,16 +501,29 @@ function renderPalmaresSection(items) {
     return;
   }
 
+  const pick = (obj, keys, fallback = "-") => {
+    for (const key of keys) {
+      const value = obj?.[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    }
+    return fallback;
+  };
+
   const rows = items
     .map((item) => {
-      const cols = [
-        escapeHtml(item.titolo || item.nome || item.torneo || "-"),
-        escapeHtml(item.anno || item.year || item.data || ""),
-        escapeHtml(item.esito || item.risultato || item.posizione || ""),
-      ]
-        .map((value) => `<td>${value}</td>`)
-        .join("");
-      return `<tr>${cols}</tr>`;
+      const dataInizio = pick(item, ["data_inizio", "data", "inizio"], "-");
+      const denominazione = pick(item, ["denominazione", "nome", "titolo", "torneo"], "-");
+      const tipo = pick(item, ["tipo", "tipo_torneo", "tipologia"], "-");
+      const punti = pick(item, ["punti", "punteggio", "score"], "-");
+
+      return `
+        <tr>
+          <td>${escapeHtml(dataInizio)}</td>
+          <td>${escapeHtml(denominazione)}</td>
+          <td>${escapeHtml(tipo)}</td>
+          <td>${escapeHtml(punti)}</td>
+        </tr>
+      `;
     })
     .join("");
 
@@ -258,12 +532,32 @@ function renderPalmaresSection(items) {
       <h3 class="detail-group-title">Palmares</h3>
       <div class="tournaments-table-wrap">
         <table class="tournaments-table">
-          <thead><tr><th>Evento</th><th>Anno</th><th>Esito</th></tr></thead>
+          <thead><tr><th>Data Inizio</th><th>Denominazione</th><th>Tipo</th><th>Punti</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
     </div>
   `;
+}
+
+async function loadPalmaresSection(idGiocatore) {
+  const target = document.getElementById("player-palmares");
+  if (!target) return;
+  if (!idGiocatore) {
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">ID giocatore mancante.</div></div>';
+    return;
+  }
+
+  target.innerHTML = '<div class="detail-cell"><div class="detail-value">Caricamento palmares...</div></div>';
+  try {
+    const data = await fetchPlayerPalmares(idGiocatore);
+    const list = Array.isArray(data?.results) ? data.results : data?.result || data?.data || data;
+    const items = Array.isArray(list) ? list : [];
+    renderPalmaresSection(items);
+  } catch (error) {
+    console.error(error);
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">Errore nel caricamento del palmares.</div></div>';
+  }
 }
 async function initPlayerDetail() {
   const fallback = {
@@ -309,20 +603,35 @@ async function initPlayerDetail() {
 
   const normalized = normalizePlayerData(detail, { ...fallback, locationLabel });
   renderStatsSection(normalized);
-  renderHistorySection(normalized.history);
   renderPalmaresSection(normalized.palmares);
   renderHeroMeta(normalized);
 
+  setupHistoryLoadMore();
   setupNavButtons();
+
+  const playerId = fallback.id || "199522";
+  loadHistorySection(playerId);
 }
 
 initPlayerDetail();
+
+function setupHistoryLoadMore() {
+  const btn = document.getElementById("load-more-history");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    const currentId = getParam("id", "199522") || "199522";
+    loadHistorySection(currentId, { append: true });
+  });
+}
 
 function setupNavButtons() {
   const buttons = Array.from(document.querySelectorAll(".sidebar .menu-item[data-target]"));
   const sections = ["player-stats", "player-history", "player-palmares"];
 
+  let activeSectionId = null;
+
   const showSection = (id) => {
+    activeSectionId = id;
     sections.forEach((sectionId) => {
       const el = document.getElementById(sectionId);
       if (!el) return;
@@ -332,6 +641,8 @@ function setupNavButtons() {
     buttons.forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.target === id);
     });
+
+    updateHistoryActionsVisibility();
   };
 
   buttons.forEach((btn) => {
@@ -340,6 +651,15 @@ function setupNavButtons() {
     if (!el) return;
     btn.addEventListener("click", () => {
       showSection(targetId);
+      if (targetId === "player-palmares") {
+        const currentId = getParam("id", "");
+        loadPalmaresSection(currentId);
+      } else if (targetId === "player-history") {
+        const currentId = getParam("id", "199522") || "199522";
+        if (!historyState.loaded) {
+          loadHistorySection(currentId);
+        }
+      }
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       el.focus?.();
     });

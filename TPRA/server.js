@@ -20,6 +20,8 @@ const TPRA_TORNEO_ISCRITTI_URL = "https://tpra-prod-frontend-function.azurewebsi
 const TPRA_TORNEO_TABELLONI_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/tornei/tabelloni/view";
 const TPRA_TORNEO_GIRONI_CLASSIFICHE_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/tornei/gironi_classifiche/list";
 const TPRA_GIOCATORE_DETTAGLIO_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/dettaglio/view";
+const TPRA_GIOCATORE_PALMARES_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/palmares/list";
+const TPRA_GIOCATORE_ULTIMI_RISULTATI_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/ultimi_risultati/list";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -255,6 +257,16 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-dettaglio") {
     handleGenericProxy(request, response, TPRA_GIOCATORE_DETTAGLIO_URL);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-palmares") {
+    handleGenericProxy(request, response, TPRA_GIOCATORE_PALMARES_URL);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-ultimi-risultati") {
+    handleGenericProxy(request, response, TPRA_GIOCATORE_ULTIMI_RISULTATI_URL);
     return;
   }
 
