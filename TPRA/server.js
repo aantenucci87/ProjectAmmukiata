@@ -19,6 +19,7 @@ const TPRA_TORNEO_DETTAGLIO_URL = "https://tpra-prod-frontend-function.azurewebs
 const TPRA_TORNEO_ISCRITTI_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/tornei/iscritti/view";
 const TPRA_TORNEO_TABELLONI_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/tornei/tabelloni/view";
 const TPRA_TORNEO_GIRONI_CLASSIFICHE_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/tornei/gironi_classifiche/list";
+const TPRA_GIOCATORE_DETTAGLIO_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/dettaglio/view";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -249,6 +250,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "POST" && requestUrl.pathname === "/api/torneo-gironi-classifiche") {
     handleGenericProxy(request, response, TPRA_TORNEO_GIRONI_CLASSIFICHE_URL);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-dettaglio") {
+    handleGenericProxy(request, response, TPRA_GIOCATORE_DETTAGLIO_URL);
     return;
   }
 

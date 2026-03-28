@@ -924,15 +924,43 @@ function renderFinaleView(data, target) {
   setupBracketZoom();
 }
 
+const PLAYER_DETAIL_CACHE_KEY = "tpra:playerDetail";
+
+function cachePlayerDetail(id, data) {
+  try {
+    sessionStorage.setItem(PLAYER_DETAIL_CACHE_KEY, JSON.stringify({ id, data, ts: Date.now() }));
+  } catch (_error) {}
+}
+
+function pickPlayerId(entry, index = 1) {
+  const genericKeys = ["id_persona", "idPersona", "id_giocatore", "idGiocatore", "id"];
+  const indexedKeys = [
+    `id_persona_${index}`,
+    `idPersona${index}`,
+    `id_giocatore_${index}`,
+    `idGiocatore${index}`,
+  ];
+
+  for (const key of [...indexedKeys, ...genericKeys]) {
+    const value = entry?.[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") return String(value);
+  }
+
+  return "";
+}
+
 function buildFightersCards(entries, isDouble) {
   if (!Array.isArray(entries) || entries.length === 0) {
     return '<div class="detail-cell"><div class="detail-value">Nessun iscritto disponibile.</div></div>';
   }
 
-  const fighterBlock = (name, power, coeff) => {
+  const fighterBlock = (name, power, coeff, idPersona) => {
     const { surname, given } = splitNameParts(name);
+    const idAttr = idPersona ? ` data-player-id="${escapeHtml(idPersona)}"` : "";
+    const nameAttr = name ? ` data-player-name="${escapeHtml(name)}"` : "";
+    const clickableClass = idPersona ? " is-clickable" : "";
     return `
-      <div class="fighter-card">
+      <div class="fighter-card js-player-card${clickableClass}"${idAttr}${nameAttr} tabindex="0" role="button" aria-label="Apri dettaglio giocatore">
         <div class="fighter-name-block">
           <p class="fighter-surname-line"><span class="fighter-surname">${escapeHtml(surname || "N/D")}</span></p>
           ${given ? `<p class="fighter-given-line">${escapeHtml(given)}</p>` : ""}
@@ -951,12 +979,17 @@ function buildFightersCards(entries, isDouble) {
       const seedClass = isSeed ? " is-seed" : "";
       const seedBadge = isSeed ? '<div class="fighter-seed-badge" aria-label="Testa di serie"><span class="seed-icon">&#9733;</span></div>' : "";
       if (isDouble) {
-        const player1 = fighterBlock(item.giocatore_1, item.power_1, item.coefficiente_1);
-        const player2 = fighterBlock(item.giocatore_2, item.power_2, item.coefficiente_2);
+        const player1 = fighterBlock(item.giocatore_1, item.power_1, item.coefficiente_1, pickPlayerId(item, 1));
+        const player2 = fighterBlock(item.giocatore_2, item.power_2, item.coefficiente_2, pickPlayerId(item, 2));
         return `<article class="fighter-master-card${seedClass}">${seedBadge}${player1}${player2}</article>`;
       }
 
-      const single = fighterBlock(item.giocatore_1 || item.giocatore_2, item.power_1 ?? item.power, item.coefficiente_1 ?? item.coefficiente);
+      const single = fighterBlock(
+        item.giocatore_1 || item.giocatore_2,
+        item.power_1 ?? item.power,
+        item.coefficiente_1 ?? item.coefficiente,
+        pickPlayerId(item)
+      );
       return `<article class="fighter-master-card${seedClass}">${seedBadge}${single}</article>`;
     })
     .join("");
@@ -982,6 +1015,118 @@ function renderFightersSection(record, target) {
   const cards = buildFightersCards(combined, record.doppio);
 
   target.innerHTML = cards;
+
+  attachPlayerCardHandlers(target);
+}
+
+function normalizePlayerForNavigation(raw, fallback = {}) {
+  const root = raw?.result || raw?.results?.[0] || raw?.data || raw?.player || raw?.giocatore || raw;
+  const persona = root?.persona || root?.giocatore || root || {};
+
+  const nameParts = [];
+  if (persona.cognome) nameParts.push(persona.cognome);
+  if (persona.nome) nameParts.push(persona.nome);
+  const fullName = nameParts.length ? nameParts.join(" ") : persona.nome_completo || fallback.name || "Giocatore";
+
+  const city = persona.comune || persona.citta || persona.city || fallback.city;
+  const province = persona.provincia || persona.province || fallback.province;
+  const region = persona.regione || persona.region || fallback.region;
+
+  const history = root?.storico || root?.storico_tornei || root?.partite || [];
+
+  return {
+    id: persona.id_persona || persona.id || fallback.id,
+    name: fullName,
+    club: persona.club || persona.circolo || persona.societa || fallback.club,
+    city,
+    province,
+    region,
+    ranking: persona.classifica || persona.classifica_tpra || persona.ranking || fallback.ranking,
+    points: persona.punti || persona.punti_tpra || persona.points || fallback.points,
+    power: persona.power || persona.power_medio || fallback.power,
+    coeff: persona.coeff || persona.coefficiente || fallback.coeff,
+    category: persona.categoria || persona.classe || fallback.category,
+    hand: persona.mano || persona.hand || fallback.hand,
+    age: persona.eta || persona.age || fallback.age,
+    gender: persona.sesso || persona.gender || fallback.gender,
+    history,
+  };
+}
+
+async function fetchPlayerDetail(idPersona) {
+  const payload = { id_settore: 2, id_persona: idPersona };
+  const response = await fetch("/api/giocatore-dettaglio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Impossibile recuperare il dettaglio giocatore (HTTP ${response.status})`);
+  }
+
+  return response.json();
+}
+
+function buildPlayerDetailUrl(detail, fallback) {
+  const normalized = normalizePlayerForNavigation(detail, fallback);
+  const params = new URLSearchParams({
+    id: normalized.id || fallback.id || "",
+    name: normalized.name || fallback.name || "Giocatore",
+    club: normalized.club || "",
+    city: normalized.city || "",
+    province: normalized.province || "",
+    region: normalized.region || "",
+    ranking: normalized.ranking || "",
+    points: normalized.points || "",
+    power: normalized.power || "",
+    coeff: normalized.coeff || "",
+    category: normalized.category || "",
+    hand: normalized.hand || "",
+    age: normalized.age || "",
+    gender: normalized.gender || "",
+  });
+
+  return `./player-detail.html?${params.toString()}`;
+}
+
+function attachPlayerCardHandlers(container) {
+  const cards = container.querySelectorAll(".js-player-card[data-player-id]");
+  if (!cards.length) return;
+
+  const setBusy = (el, isBusy) => {
+    el.dataset.loading = isBusy ? "true" : "false";
+    el.classList.toggle("is-loading", isBusy);
+  };
+
+  const handle = async (card) => {
+    const idPersona = card.dataset.playerId;
+    if (!idPersona) return;
+    const name = card.dataset.playerName || "Giocatore";
+
+    setBusy(card, true);
+    try {
+      const detail = await fetchPlayerDetail(idPersona);
+      cachePlayerDetail(idPersona, detail);
+      const url = buildPlayerDetailUrl(detail, { id: idPersona, name });
+      window.location.href = url;
+    } catch (error) {
+      console.error(error);
+      alert("Impossibile aprire il dettaglio giocatore.");
+    } finally {
+      setBusy(card, false);
+    }
+  };
+
+  cards.forEach((card) => {
+    card.addEventListener("click", () => handle(card));
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        handle(card);
+      }
+    });
+  });
 }
 
 function renderDetailInfo(raw, target, fallbacks = {}) {

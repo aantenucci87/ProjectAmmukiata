@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dettaglio Giocatore</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .detail-hero,
+      .detail-grid {
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(15, 26, 48, 0.94) 0%, rgba(12, 21, 39, 0.92) 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .detail-hero {
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px 18px;
+        align-items: start;
+      }
+
+      .hero-col-primary {
+        display: grid;
+        gap: 6px;
+      }
+
+      .hero-meta-column {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 6px 10px;
+        width: min(520px, 100%);
+      }
+
+      .hero-meta-row {
+        display: contents;
+      }
+
+      .hero-meta-label {
+        color: var(--accent);
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        min-width: 140px;
+      }
+
+      .hero-meta-value {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      .detail-eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .detail-title {
+        margin: 0;
+        font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+        line-height: 1.08;
+      }
+
+      .detail-subtitle {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .detail-group {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: rgba(8, 14, 28, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+      }
+
+      .detail-group-title {
+        margin: 0;
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .detail-grid-inner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+
+      .detail-group-full .detail-grid-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-cell {
+        padding: 16px 18px;
+        background: rgba(8, 14, 28, 0.88);
+        display: grid;
+        gap: 7px;
+      }
+
+      .detail-label {
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .detail-value {
+        color: var(--text);
+        font-size: 0.93rem;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      .detail-main {
+        display: grid;
+        gap: 16px;
+      }
+
+      @media (max-width: 720px) {
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigazione dettaglio giocatore">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">Dettaglio</p>
+            <h1>Giocatore</h1>
+          </div>
+        </div>
+        <div class="sidebar-body">
+          <nav class="menu-list">
+            <button class="menu-item" type="button" data-target="player-stats"><span class="menu-item-title">Statistiche</span></button>
+            <button class="menu-item" type="button" data-target="player-history"><span class="menu-item-title">Ultimi Risultati</span></button>
+            <button class="menu-item" type="button" data-target="player-palmares"><span class="menu-item-title">Palmares</span></button>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div class="detail-main">
+          <section class="detail-hero" id="player-hero">
+            <span class="detail-eyebrow">Dettaglio Giocatore</span>
+            <div class="hero-grid">
+              <div class="hero-col-primary">
+                <h1 class="detail-title" id="player-name">Giocatore</h1>
+                <p class="detail-subtitle" id="player-subtitle">Comune</p>
+              </div>
+              <div class="hero-col hero-meta-column" id="player-hero-meta"></div>
+              <div class="hero-col hero-meta-column" id="player-hero-meta-secondary"></div>
+            </div>
+          </section>
+
+          <section class="detail-grid" id="player-stats"></section>
+
+          <section class="detail-grid" id="player-history"></section>
+
+          <section class="detail-grid" id="player-palmares"></section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./player-detail.js"></script>
+  </body>
+</html>
