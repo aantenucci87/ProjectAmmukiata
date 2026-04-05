@@ -22,6 +22,7 @@ const TPRA_TORNEO_GIRONI_CLASSIFICHE_URL = "https://tpra-prod-frontend-function.
 const TPRA_GIOCATORE_DETTAGLIO_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/dettaglio/view";
 const TPRA_GIOCATORE_PALMARES_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/palmares/list";
 const TPRA_GIOCATORE_ULTIMI_RISULTATI_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/ultimi_risultati/list";
+const TPRA_GIOCATORE_STATISTICHE_URL = "https://tpra-prod-frontend-function.azurewebsites.net/api/v1/giocatori/statistiche/view";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -181,27 +182,35 @@ async function handleGenericProxy(request, response, upstreamUrl) {
       }
 
       const dispatcher = getProxyDispatcher();
+      const authHeader = request.headers["authorization"] || "Bearer null";
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(new Error("Proxy fetch timeout")), 15000);
+      const timeout = setTimeout(() => controller.abort(new Error("Proxy fetch timeout")), 30000);
 
-      const upstreamResponse = await fetch(upstreamUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(parsedBody),
-        dispatcher,
-        signal: controller.signal,
-      });
+      try {
+        const upstreamResponse = await fetch(upstreamUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: authHeader,
+          },
+          body: JSON.stringify(parsedBody),
+          dispatcher,
+          signal: controller.signal,
+        });
 
-      clearTimeout(timeout);
+        clearTimeout(timeout);
 
-      const rawText = await upstreamResponse.text();
-      const contentType = upstreamResponse.headers.get("content-type") || "application/json; charset=utf-8";
+        const rawText = await upstreamResponse.text();
+        const contentType = upstreamResponse.headers.get("content-type") || "application/json; charset=utf-8";
 
-      response.writeHead(upstreamResponse.status, { "Content-Type": contentType });
-      response.end(rawText);
+        response.writeHead(upstreamResponse.status, { "Content-Type": contentType });
+        response.end(rawText);
+      } catch (fetchError) {
+        clearTimeout(timeout);
+        console.error("Fetch error for", upstreamUrl, ":", fetchError.message);
+        throw fetchError;
+      }
     } catch (error) {
       console.error("Proxy failed:", error);
       sendJson(response, 502, {
@@ -267,6 +276,11 @@ const server = http.createServer((request, response) => {
 
   if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-ultimi-risultati") {
     handleGenericProxy(request, response, TPRA_GIOCATORE_ULTIMI_RISULTATI_URL);
+    return;
+  }
+
+  if (request.method === "POST" && requestUrl.pathname === "/api/giocatore-statistiche") {
+    handleGenericProxy(request, response, TPRA_GIOCATORE_STATISTICHE_URL);
     return;
   }
 

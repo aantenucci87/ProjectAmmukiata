@@ -181,6 +181,24 @@ async function fetchPlayerHistoryApi(idPersona, rowSkip = 0, fetchRows = HISTORY
   return response.json();
 }
 
+async function fetchPlayerStats(idGiocatore, anno) {
+  if (!anno) {
+    anno = new Date().getFullYear();
+  }
+
+  const response = await fetch("/api/giocatore-statistiche", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ id_settore: 2, id_giocatore: idGiocatore, tipo: "TR", anno: anno }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Impossibile recuperare le statistiche (HTTP ${response.status})`);
+  }
+
+  return response.json();
+}
+
 function buildDetailCell(label, value) {
   if (value === undefined || value === null || String(value).trim() === "") return "";
   return `
@@ -700,6 +718,46 @@ async function loadPalmaresSection(idGiocatore) {
     target.innerHTML = '<div class="detail-cell"><div class="detail-value">Errore nel caricamento del palmares.</div></div>';
   }
 }
+
+async function loadStatsSection(idGiocatore) {
+  const target = document.getElementById("player-stats");
+  if (!target) return;
+  if (!idGiocatore) {
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">ID giocatore mancante.</div></div>';
+    return;
+  }
+
+  target.innerHTML = '<div class="detail-cell"><div class="detail-value">Caricamento statistiche...</div></div>';
+  try {
+    const anno = new Date().getFullYear();
+    const data = await fetchPlayerStats(idGiocatore, anno);
+    const statsData = Array.isArray(data?.results) ? data.results[0] : data?.result || data?.data || data;
+    
+    if (!statsData) {
+      target.innerHTML = '<div class="detail-cell"><div class="detail-value">Dati statistiche non disponibili.</div></div>';
+      return;
+    }
+
+    const anniAttivita = statsData?.anni_attivita || [];
+    const anniOptions = anniAttivita.map((item) => item.anno);
+    anniOptions.unshift("Totale");
+
+    const dropdownHtml = `
+      <div class="detail-cell">
+        <label class="detail-label">Seleziona Anno</label>
+        <select id="stats-year-selector" class="detail-value" style="padding: 8px; border-radius: 8px; border: 1px solid #9fb3ce; background: #0f1a30; color: #e8edf5;">
+          ${anniOptions.map((anno) => `<option value="${anno}">${anno}</option>`).join("")}
+        </select>
+      </div>
+    `;
+
+    target.innerHTML = dropdownHtml;
+  } catch (error) {
+    console.error(error);
+    target.innerHTML = '<div class="detail-cell"><div class="detail-value">Errore nel caricamento delle statistiche.</div></div>';
+  }
+}
+
 async function initPlayerDetail() {
   const fallback = {
     name: getParam("name", "Giocatore"),
@@ -800,6 +858,9 @@ function setupNavButtons() {
         if (!historyState.loaded) {
           loadHistorySection(currentId);
         }
+      } else if (targetId === "player-stats") {
+        const currentId = getParam("id", "");
+        loadStatsSection(currentId);
       }
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       el.focus?.();
