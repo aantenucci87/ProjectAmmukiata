@@ -509,33 +509,174 @@ function renderPalmaresSection(items) {
     return fallback;
   };
 
-  const rows = items
-    .map((item) => {
-      const dataInizio = pick(item, ["data_inizio", "data", "inizio"], "-");
-      const denominazione = pick(item, ["denominazione", "nome", "titolo", "torneo"], "-");
-      const tipo = pick(item, ["tipo", "tipo_torneo", "tipologia"], "-");
-      const punti = pick(item, ["punti", "punteggio", "score"], "-");
+  const mapRisultato = (value) => {
+    if (!value) return value;
+    const key = String(value).trim().toUpperCase();
+    const dict = {
+      W: "Winner",
+      F: "Finale",
+      SF: "Semifinale",
+      QF: "Qualificato",
+    };
+    return dict[key] || value;
+  };
+
+  const parseDenominazione = (value) => {
+    if (!value) return { tipo: "", circuito: "", categoria: "" };
+
+    const text = String(value);
+    const lower = text.toLowerCase();
+
+    const tipoMatch = text.match(/\b(MASCHILE|FEMMINILE|MISTO)\b/i);
+    const tipo = tipoMatch?.[1] ? tipoMatch[1].toUpperCase() : "";
+
+    const fasciaIdx = lower.indexOf("fascia");
+    let circuito = "";
+    if (fasciaIdx > 0) {
+      circuito = text.slice(0, fasciaIdx).replace(/[-–|]+\s*$/g, "").trim();
+    }
+
+    const categoryKeywordMatch = text.match(/\b(ENTRY|EXPERT|OPEN)\b/i);
+    const categoria = categoryKeywordMatch?.[1] ? categoryKeywordMatch[1].toUpperCase() : "";
+
+    return { tipo, circuito, categoria };
+  };
+
+  const parseDate = (value) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    // ISO or native-parsable
+    const native = new Date(raw);
+    if (!Number.isNaN(native.getTime())) return native.getTime();
+
+    // Year-only (e.g. "2024")
+    const yearMatch = raw.match(/^(20\d{2}|19\d{2})$/);
+    if (yearMatch) {
+      return new Date(Number(yearMatch[1]), 0, 1).getTime();
+    }
+
+    // DD/MM/YYYY or DD-MM-YYYY
+    const dmy = raw.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})$/);
+    if (dmy) {
+      const [, d, m, y] = dmy;
+      const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+      if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+    }
+
+    // MM/DD/YYYY
+    const mdy = raw.match(/^(\d{1,2})[\/\.-](\d{1,2})[\/\.-](\d{4})$/);
+    if (mdy) {
+      const [, m, d, y] = mdy;
+      const parsed = new Date(Number(y), Number(m) - 1, Number(d));
+      if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+    }
+
+    return null;
+  };
+
+  const normalized = items.map((item, idx) => {
+    const dataRaw =
+      pick(item, ["data_inizio", "data", "inizio", "anno", "year", "data_fine"], "") || "";
+    const denominazione = pick(item, ["denominazione", "nome", "titolo", "torneo"], `Torneo ${idx + 1}`);
+    const tipoOriginal = pick(item, ["tipo", "tipo_torneo", "tipologia", "categoria"], "");
+    const esito = pick(item, ["esito", "posizione", "risultato", "fase"], "");
+    const punti = pick(item, ["punti", "punteggio", "score", "tpra_points"], "");
+    const circuito = pick(item, ["circuito", "nome_circuito", "circuit"], "");
+    const luogo = pick(item, ["citta", "luogo", "location", "comune", "sede"], "");
+    const categoria = pick(item, ["categoria", "categoria_torneo", "livello"], "");
+
+    const derived = parseDenominazione(denominazione);
+
+    const tipoFinal = derived.tipo || tipoOriginal;
+    const circuitoFinal = derived.circuito || circuito;
+    const categoriaFinal = derived.categoria || categoria;
+    const risultatoMapped = mapRisultato(tipoOriginal);
+
+    const ts = parseDate(dataRaw);
+    const dateLabel = dataRaw || "Data N/D";
+
+    return {
+      ts,
+      dateLabel,
+      denominazione,
+      tipo: tipoFinal,
+      risultato: risultatoMapped,
+      esito,
+      punti,
+      circuito: circuitoFinal,
+      luogo,
+      categoria: categoriaFinal,
+    };
+  });
+
+  normalized.sort((a, b) => {
+    const tsA = a.ts ?? -Infinity;
+    const tsB = b.ts ?? -Infinity;
+    return tsB - tsA;
+  });
+
+  const cards = normalized
+    .map((item, idx) => {
+      const side = idx % 2 === 0 ? "left" : "right";
+      const pointsTag = item.punti ? `<span class="timeline-pill">${escapeHtml(item.punti)} pt</span>` : "";
+      const title = item.circuito || item.denominazione;
+
+      const detailItems = [
+        { label: "Esito", value: item.esito },
+        { label: "Luogo", value: item.luogo },
+      ]
+        .filter((row) => row.value && String(row.value).trim() !== "")
+        .map(
+          (row) => `
+            <div class="timeline-detail">
+              <span class="timeline-detail-label">${escapeHtml(row.label)}</span>
+              <span class="timeline-detail-value">${escapeHtml(row.value)}</span>
+            </div>
+          `
+        )
+        .join("");
+
+      const catTipoBlock =
+        item.categoria || item.tipo
+          ? `<div class="timeline-detail cat-tipo">
+              ${item.categoria ? `<div class="timeline-detail-label">Categoria</div><div class="timeline-detail-value">${escapeHtml(item.categoria)}</div>` : ""}
+              ${item.tipo ? `<div class="timeline-detail-label">Tipo</div><div class="timeline-detail-value">${escapeHtml(item.tipo)}</div>` : ""}
+             </div>`
+          : "";
+
+      const risultatoBlock = item.risultato || pointsTag
+        ? `<div class="timeline-detail risultato-block">
+             <span class="timeline-detail-label">Risultato</span>
+             ${item.risultato ? `<span class="timeline-detail-value">${escapeHtml(item.risultato)}</span>` : ""}
+             ${pointsTag ? `<span class="timeline-detail-value pill-row">${pointsTag}</span>` : ""}
+           </div>`
+        : "";
 
       return `
-        <tr>
-          <td>${escapeHtml(dataInizio)}</td>
-          <td>${escapeHtml(denominazione)}</td>
-          <td>${escapeHtml(tipo)}</td>
-          <td>${escapeHtml(punti)}</td>
-        </tr>
+        <article class="timeline-item timeline-${side}">
+          <span class="timeline-dot" aria-hidden="true"></span>
+          <div class="timeline-card">
+            <header class="timeline-card-header">
+              <div class="timeline-heading">
+                <p class="timeline-date">${escapeHtml(item.dateLabel)}</p>
+                <h4 class="timeline-title">${escapeHtml(title || "Torneo")}</h4>
+              </div>
+            </header>
+            ${catTipoBlock || risultatoBlock || detailItems
+              ? `<div class="timeline-detail-grid">${catTipoBlock}${risultatoBlock}${detailItems}</div>`
+              : ""}
+          </div>
+        </article>
       `;
     })
     .join("");
 
   target.innerHTML = `
-    <div class="detail-cell">
+    <div class="detail-group palmares-timeline">
       <h3 class="detail-group-title">Palmares</h3>
-      <div class="tournaments-table-wrap">
-        <table class="tournaments-table">
-          <thead><tr><th>Data Inizio</th><th>Denominazione</th><th>Tipo</th><th>Punti</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
+      <div class="timeline-list" role="list">${cards}</div>
     </div>
   `;
 }
