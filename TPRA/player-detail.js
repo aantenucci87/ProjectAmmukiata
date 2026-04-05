@@ -527,13 +527,8 @@ function renderPalmaresSection(items) {
     const text = String(value);
     const lower = text.toLowerCase();
 
-    const levelIdx = lower.indexOf("level");
-    let tipo = "";
-    if (levelIdx >= 0) {
-      const after = text.slice(levelIdx + "level".length);
-      const nextSep = after.search(/[-–|]/);
-      tipo = (nextSep >= 0 ? after.slice(0, nextSep) : after).trim();
-    }
+    const tipoMatch = text.match(/\b(MASCHILE|FEMMINILE|MISTO)\b/i);
+    const tipo = tipoMatch?.[1] ? tipoMatch[1].toUpperCase() : "";
 
     const fasciaIdx = lower.indexOf("fascia");
     let circuito = "";
@@ -541,14 +536,8 @@ function renderPalmaresSection(items) {
       circuito = text.slice(0, fasciaIdx).replace(/[-–|]+\s*$/g, "").trim();
     }
 
-    const doppioIdx = lower.indexOf("doppio", fasciaIdx >= 0 ? fasciaIdx : 0);
-    let categoria = "";
-    if (fasciaIdx >= 0 && doppioIdx > fasciaIdx) {
-      categoria = text
-        .slice(fasciaIdx + "fascia".length, doppioIdx)
-        .replace(/^[:\s-]+|[:\s-]+$/g, "")
-        .trim();
-    }
+    const categoryKeywordMatch = text.match(/\b(ENTRY|EXPERT|OPEN)\b/i);
+    const categoria = categoryKeywordMatch?.[1] ? categoryKeywordMatch[1].toUpperCase() : "";
 
     return { tipo, circuito, categoria };
   };
