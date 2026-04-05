@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dettaglio Giocatore</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .detail-hero,
+      .detail-grid {
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        background: linear-gradient(180deg, rgba(15, 26, 48, 0.94) 0%, rgba(12, 21, 39, 0.92) 100%);
+        box-shadow: var(--shadow);
+      }
+
+      html,
+      body {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .app-shell,
+      .main-content {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .detail-hero {
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 12px 18px;
+        align-items: start;
+      }
+
+      .hero-col-primary {
+        display: grid;
+        gap: 6px;
+      }
+
+      .hero-meta-column {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 6px 10px;
+        width: min(520px, 100%);
+      }
+
+      .hero-meta-row {
+        display: contents;
+      }
+
+      .hero-meta-label {
+        color: var(--accent);
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        font-weight: 700;
+        min-width: 140px;
+      }
+
+      .hero-meta-value {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .is-hidden {
+        display: none !important;
+      }
+
+      .detail-eyebrow {
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .detail-title {
+        margin: 0;
+        font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+        line-height: 1.08;
+      }
+
+      .detail-subtitle {
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.45;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      #player-history.history-cards {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        background: transparent;
+        padding: 0;
+        max-height: 70vh;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      #player-palmares {
+        max-height: 80vh;
+        overflow-y: auto;
+        padding-right: 6px;
+      }
+
+      .palmares-timeline {
+        gap: 12px;
+      }
+
+      .timeline-list {
+        position: relative;
+        display: grid;
+        gap: 18px;
+        margin: 0;
+        padding: 8px 0;
+        justify-items: stretch;
+      }
+
+      .timeline-list::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 4px;
+        bottom: 4px;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(86, 194, 255, 0.7) 0%, rgba(86, 194, 255, 0.08) 100%);
+        opacity: 0.9;
+        transform: translateX(-50%);
+      }
+
+      .timeline-item {
+        position: relative;
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: flex-start;
+      }
+
+      .timeline-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 999px;
+        border: 2px solid var(--accent);
+        background: var(--panel-strong);
+        box-shadow: 0 0 0 4px rgba(86, 194, 255, 0.12);
+        position: absolute;
+        left: 50%;
+        top: 18px;
+        transform: translateX(-50%);
+      }
+
+      .timeline-card {
+        border: 1px solid var(--panel-border);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.04);
+        box-shadow: var(--shadow-light, 0 8px 18px rgba(0, 0, 0, 0.2));
+        padding: 14px 16px;
+        display: grid;
+        gap: 10px;
+        width: 420px;
+        max-width: 90vw;
+      }
+
+      .timeline-item.timeline-left .timeline-card {
+        justify-self: end;
+      }
+
+      .timeline-item.timeline-right .timeline-card {
+        justify-self: start;
+      }
+
+      .timeline-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        width: 100%;
+      }
+
+      .timeline-heading {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+        flex: 1;
+      }
+
+      .timeline-date {
+        margin: 0;
+        color: var(--accent);
+        font-size: 0.78rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        align-self: stretch;
+        padding: 8px 10px;
+        gap: 3px;
+      }
+
+      .timeline-title {
+        margin-top: 4px;
+        font-size: 1.02rem;
+        letter-spacing: 0.01em;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      .timeline-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .timeline-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font-size: 0.86rem;
+        letter-spacing: 0.01em;
+      }
+
+      .timeline-detail {
+        display: grid;
+        gap: 4px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--panel-border);
+      }
+
+      .timeline-detail.cat-tipo {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .timeline-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+        padding-right: 16px;
+      }
+
+      .timeline-detail.risultato-block {
+        align-self: stretch;
+        justify-self: start;
+        width: fit-content;
+        min-width: 0;
+        padding: 8px 10px;
+        gap: 3px;
+      }
+
+      .timeline-detail-label {
+        color: var(--accent);
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      .timeline-detail-value {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .timeline-detail .pill-row {
+        margin-top: 4px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .timeline-pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--accent-strong);
+        border: 1px solid rgba(86, 194, 255, 0.28);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      @media (max-width: 760px) {
+        .timeline-list {
+          padding-left: 18px;
+        }
+
+        .timeline-list::before {
+          left: 10px;
+          transform: none;
+        }
+
+        .timeline-dot {
+          left: 10px;
+          transform: none;
+        }
+
+        .timeline-card,
+        .timeline-item.timeline-left .timeline-card,
+        .timeline-item.timeline-right .timeline-card {
+          justify-self: stretch;
+          width: 100%;
+        }
+      }
+
+      .history-card {
+        border: 1px solid var(--panel-border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .detail-group {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        background: rgba(8, 14, 28, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 14px;
+      }
+
+      .detail-group-title {
+        margin: 0;
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      .history-card .detail-group-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .detail-grid-inner {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+      }
+
+      .detail-group-full .detail-grid-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-cell {
+        padding: 16px 18px;
+        background: rgba(8, 14, 28, 0.88);
+        display: grid;
+        gap: 7px;
+      }
+
+      .detail-label {
+        color: var(--accent);
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .detail-value {
+        color: var(--text);
+        font-size: 0.93rem;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      .detail-main {
+        display: grid;
+        gap: 16px;
+        max-height: 100vh;
+        overflow: hidden;
+      }
+
+      .team-block {
+        display: grid;
+        gap: 2px;
+      }
+
+      .team-line {
+        display: block;
+      }
+
+      .board-win-icon {
+        color: #24d665;
+        font-weight: 700;
+        display: inline-block;
+        min-width: 18px;
+        text-align: center;
+      }
+
+      /* Match table alignment (mirrors torneo partite table) */
+      .board-col-compact {
+        width: 48px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .board-win-col {
+        width: 32px;
+        text-align: center;
+      }
+
+      .board-vs-col,
+      .board-col-compact.board-vs-col {
+        width: 40px;
+        text-align: center;
+      }
+
+      .board-team-col {
+        width: 1fr;
+      }
+
+      .board-team-left,
+      .board-team-right {
+        text-align: left;
+      }
+
+      .board-team-right {
+        text-align: right;
+      }
+
+      .board-score-col {
+        width: 110px;
+        text-align: center;
+        white-space: nowrap;
+      }
+
+      .tournaments-table {
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      .tournament-points {
+        margin-left: auto;
+        color: var(--accent);
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-align: right;
+        max-width: 55%;
+        white-space: normal;
+        word-break: break-word;
+      }
+
+      .history-actions {
+        display: flex;
+        justify-content: center;
+        padding: 4px 0 12px;
+      }
+
+      .load-more-btn {
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--text);
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        transition: transform 120ms ease, box-shadow 120ms ease;
+        box-shadow: var(--shadow-light, 0 4px 10px rgba(0, 0, 0, 0.16));
+      }
+
+      .load-more-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow, 0 8px 18px rgba(0, 0, 0, 0.2));
+      }
+
+      .load-more-btn:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+
+      @media (max-width: 720px) {
+        .detail-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navigazione dettaglio giocatore">
+        <div class="sidebar-header">
+          <div>
+            <p class="eyebrow">Dettaglio</p>
+            <h1>Giocatore</h1>
+          </div>
+        </div>
+        <div class="sidebar-body">
+          <nav class="menu-list">
+            <button class="menu-item" type="button" data-target="player-stats"><span class="menu-item-title">Statistiche</span></button>
+            <button class="menu-item" type="button" data-target="player-history"><span class="menu-item-title">Ultimi Risultati</span></button>
+            <button class="menu-item" type="button" data-target="player-palmares"><span class="menu-item-title">Palmares</span></button>
+          </nav>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <div class="detail-main">
+          <section class="detail-hero" id="player-hero">
+            <span class="detail-eyebrow">Dettaglio Giocatore</span>
+            <div class="hero-grid">
+              <div class="hero-col-primary">
+                <h1 class="detail-title" id="player-name">Giocatore</h1>
+                <p class="detail-subtitle" id="player-subtitle">Comune</p>
+              </div>
+              <div class="hero-col hero-meta-column" id="player-hero-meta"></div>
+              <div class="hero-col hero-meta-column" id="player-hero-meta-secondary"></div>
+            </div>
+          </section>
+
+          <section class="detail-grid" id="player-stats"></section>
+
+          <section class="detail-grid" id="player-history"></section>
+
+          <div class="history-actions is-hidden" id="history-actions">
+            <button type="button" class="load-more-btn" id="load-more-history">Carica altro</button>
+          </div>
+
+          <section class="detail-grid" id="player-palmares"></section>
+        </div>
+      </main>
+    </div>
+
+    <script src="./player-detail.js"></script>
+  </body>
+</html>
